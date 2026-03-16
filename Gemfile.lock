@@ -1,0 +1,19 @@
+PATH
+  remote: .
+  specs:
+    yt_media_engine (0.1.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    minitest (5.25.4)
+
+PLATFORMS
+  x64-mingw-ucrt
+
+DEPENDENCIES
+  minitest
+  yt_media_engine!
+
+BUNDLED WITH
+   2.6.9
