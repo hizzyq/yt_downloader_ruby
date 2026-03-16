@@ -1,0 +1,16 @@
+FROM ruby:3.2-slim
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY Gemfile Gemfile.lock yt_media_engine.gemspec ./
+COPY lib/yt_media_engine/version.rb ./lib/yt_media_engine/
+
+RUN bundle install
+
+COPY . .
+
+CMD ["ruby", "TGBot.rb"]

@@ -9,24 +9,6 @@ module YtMediaEngine
   class Downloader
     DEFAULT_OUTPUT_DIR = File.expand_path("tmp/yt_media_engine", Dir.pwd)
 
-    # options:
-    #   :format        - :audio or :video (default :audio)
-    #   :audio_format  - mp3, m4a, etc (for :audio, default "mp3")
-    #   :video_format  - mp4, mkv, etc (for :video, default "mp4")
-    #   :quality       - yt-dlp format string, e.g. "bestaudio/best"
-    #   :output_dir    - directory to put resulting files
-    #   :yt_dlp_path   - custom path to yt-dlp binary
-    #   :ffmpeg_path   - custom path to ffmpeg binary
-    #   :cookies_path  - path to cookies.txt file for authenticated downloads
-    #
-    # Returns hash:
-    #   {
-    #     path: "/absolute/path/to/file",
-    #     title: "Video title",
-    #     thumbnail_url: "https://...",
-    #     thumbnail_path: "/absolute/path/to/thumbnail_or_nil",
-    #     raw_metadata: {...} # yt-dlp JSON
-    #   }
     def self.download(url, **options)
       new(**options).download(url)
     end
@@ -39,7 +21,8 @@ module YtMediaEngine
       output_dir: DEFAULT_OUTPUT_DIR,
       yt_dlp_path: "yt-dlp",
       ffmpeg_path: "ffmpeg",
-      cookies_path: nil
+      cookies_path: nil,
+      use_oauth2: true
     )
       @format       = format&.to_sym
       @audio_format = audio_format
@@ -49,6 +32,7 @@ module YtMediaEngine
       @yt_dlp_path  = yt_dlp_path
       @ffmpeg_path  = ffmpeg_path
       @cookies_path = cookies_path && File.expand_path(cookies_path.to_s)
+      @use_oauth2   = use_oauth2
 
       FileUtils.mkdir_p(@output_dir)
     end
@@ -84,7 +68,7 @@ module YtMediaEngine
         raw_metadata: metadata
       }
     ensure
-      # leave tmp_dir with media & thumbnail in place for caller
+
     end
 
     private
@@ -105,17 +89,17 @@ module YtMediaEngine
         "--print", "%(infojson)s",
         "-o", File.join(tmp_dir, "%(title)s.%(ext)s"),
         "--write-thumbnail",
-        "--convert-thumbnails", "jpg"
+        "--convert-thumbnails", "jpg", "--force-ipv4"
       ]
 
-      # authenticated cookies file (avoids DPAPI / --cookies-from-browser issues inside Docker)
-      if @cookies_path
+      if @cookies_path && File.exist?(@cookies_path)
         base += ["--cookies", @cookies_path]
+      elsif @use_oauth2
+        base += ["--username", "oauth2", "--password", ""]
       end
 
       case @format
       when :audio
-        # Сначала указываем качество через -f, потом команды конвертации
         base += ["-f", (@quality || "bestaudio/best")]
         base += ["--extract-audio", "--audio-format", @audio_format]
       when :video
@@ -128,7 +112,6 @@ module YtMediaEngine
     end
 
     def parse_metadata(stdout_str)
-      # stdout may contain extra lines; find JSON line
       json_line = stdout_str.lines.find { |l| l.strip.start_with?("{") && l.strip.end_with?("}") }
       JSON.parse(json_line || "{}")
     rescue JSON::ParserError => e
@@ -136,19 +119,12 @@ module YtMediaEngine
     end
 
     def pick_downloaded_file(dir)
-      # Даем Windows 0.5 секунды, чтобы завершить запись файла на диск
       sleep 0.5
-
-      # Получаем все файлы в директории
       candidates = Dir[File.join(dir, "*")].select { |p| File.file?(p) }
-
-      # Убираем картинки, JSON-метаданные и временные файлы самого yt-dlp
       candidates.reject! do |p|
         ext = File.extname(p).downcase
         ext =~ /\.(jpg|jpeg|png|webp|json|part|ytdl)$/
       end
-
-      # Если файлов несколько, берем самый новый (по времени изменения)
       candidates.max_by { |p| File.mtime(p) }
     end
 
@@ -160,11 +136,9 @@ module YtMediaEngine
     def extract_thumbnail_url(metadata)
       thumbs = metadata["thumbnails"]
       return nil unless thumbs.is_a?(Array) && !thumbs.empty?
-
       (thumbs.max_by { |t| t["width"].to_i * t["height"].to_i })["url"]
     rescue
       nil
     end
   end
 end
-
