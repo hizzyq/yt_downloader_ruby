@@ -1,11 +1,11 @@
-version: '3.8'
-
 services:
   redis:
     image: redis:alpine
     restart: unless-stopped
     volumes:
       - redis_data:/data
+    networks:
+      - app_net
 
   bot:
     build:
@@ -15,6 +15,8 @@ services:
     env_file: .env
     depends_on:
       - redis
+    networks:
+      - app_net
 
   worker:
     build:
@@ -24,10 +26,16 @@ services:
     env_file: .env
     volumes:
       - shared_media:/app/tmp/yt_media_engine
-      - ./yt_tokens:/root/.cache/yt-dlp/
+      - ./cookies.txt:/app/cookies.txt
     depends_on:
       - redis
+    networks:
+      - app_net
 
 volumes:
   redis_data:
   shared_media:
+
+networks:
+  app_net:
+    driver: bridge

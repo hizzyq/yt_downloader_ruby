@@ -2,12 +2,14 @@ require "open3"
 require "json"
 require "securerandom"
 require "fileutils"
+require "timeout"
 
 module YtMediaEngine
   class Error < StandardError; end
 
   class Downloader
     DEFAULT_OUTPUT_DIR = File.expand_path("tmp/yt_media_engine", Dir.pwd)
+    DOWNLOAD_TIMEOUT   = 300
 
     def self.download(url, **options)
       new(**options).download(url)
@@ -21,8 +23,7 @@ module YtMediaEngine
       output_dir: DEFAULT_OUTPUT_DIR,
       yt_dlp_path: "yt-dlp",
       ffmpeg_path: "ffmpeg",
-      cookies_path: nil,
-      use_oauth2: true
+      cookies_path: nil
     )
       @format       = format&.to_sym
       @audio_format = audio_format
@@ -32,7 +33,6 @@ module YtMediaEngine
       @yt_dlp_path  = yt_dlp_path
       @ffmpeg_path  = ffmpeg_path
       @cookies_path = cookies_path && File.expand_path(cookies_path.to_s)
-      @use_oauth2   = use_oauth2
 
       FileUtils.mkdir_p(@output_dir)
     end
@@ -43,100 +43,123 @@ module YtMediaEngine
       tmp_dir = File.join(@output_dir, SecureRandom.uuid)
       FileUtils.mkdir_p(tmp_dir)
 
-      yt_dlp_cmd = build_yt_dlp_command(url, tmp_dir)
+      metadata = fetch_metadata(url)
+      run_download(url, tmp_dir)
 
-      stdout_str, stderr_str, status = Open3.capture3(yt_dlp_env, *yt_dlp_cmd)
-
-      stdout_str = stdout_str.force_encoding('UTF-8').scrub
-      stderr_str = stderr_str.force_encoding('UTF-8').scrub
-
-      unless status.success?
-        raise Error, "yt-dlp failed (status=#{status.exitstatus}): #{stderr_str.strip}"
-      end
-
-      metadata = parse_metadata(stdout_str)
-      file_path = pick_downloaded_file(tmp_dir)
+      file_path      = pick_downloaded_file(tmp_dir)
       thumbnail_path = find_thumbnail_file(tmp_dir)
 
       raise Error, "Downloaded file not found in #{tmp_dir}" unless file_path
 
       {
-        path: file_path,
-        title: metadata["title"],
-        thumbnail_url: extract_thumbnail_url(metadata),
+        path:           file_path,
+        title:          metadata["title"],
+        thumbnail_url:  extract_thumbnail_url(metadata),
         thumbnail_path: thumbnail_path,
-        raw_metadata: metadata
+        raw_metadata:   metadata
       }
-    ensure
-
     end
 
     private
 
-    def yt_dlp_env
-      {
-        "FFMPEG_BINARY" => @ffmpeg_path
-      }
+    def cookies_args
+      return [] unless @cookies_path && File.file?(@cookies_path) && File.size(@cookies_path) > 0
+      ["--cookies", @cookies_path]
     end
 
-    def build_yt_dlp_command(url, tmp_dir)
-      base = [
-        @yt_dlp_path,
-        "--no-playlist",
-        "--no-warnings",
-        "--restrict-filenames",
-        "--ignore-errors",
-        "--print", "%(infojson)s",
-        "-o", File.join(tmp_dir, "%(title)s.%(ext)s"),
-        "--write-thumbnail",
-        "--convert-thumbnails", "jpg", "--force-ipv4"
-      ]
+    def yt_dlp_env
+      { "FFMPEG_BINARY" => @ffmpeg_path }
+    end
 
-      if @cookies_path && File.exist?(@cookies_path)
-        base += ["--cookies", @cookies_path]
-      elsif @use_oauth2
-        base += ["--username", "oauth2", "--password", ""]
+    def fetch_metadata(url)
+      cmd = [
+              @yt_dlp_path,
+              "--no-playlist",
+              "--dump-json",
+              "--no-warnings",
+              "--force-ipv4"
+            ] + cookies_args + [url]
+
+      stdout, _stderr, status = run_with_timeout(cmd, 60)
+      return {} unless status.success?
+
+      JSON.parse(stdout.force_encoding("UTF-8").scrub.strip)
+    rescue JSON::ParserError, Timeout::Error
+      {}
+    end
+
+    def run_download(url, tmp_dir)
+      cmd = [
+              @yt_dlp_path,
+              "--no-playlist",
+              "--no-warnings",
+              "--restrict-filenames",
+              "--force-ipv4",
+              "-o", File.join(tmp_dir, "%(title)s.%(ext)s"),
+              "--write-thumbnail",
+              "--convert-thumbnails", "jpg"
+            ] + cookies_args + format_args + [url]
+
+      _stdout, stderr, status = run_with_timeout(cmd, DOWNLOAD_TIMEOUT)
+
+      unless status.success?
+        raise Error, "yt-dlp failed (status=#{status.exitstatus}): #{stderr.force_encoding('UTF-8').scrub.strip}"
       end
+    end
 
+    def format_args
       case @format
       when :audio
-        base += ["-f", (@quality || "bestaudio/best")]
-        base += ["--extract-audio", "--audio-format", @audio_format]
+        # bestaudio/best — fallback на best если отдельного аудио нет
+        ["-f", (@quality || "bestaudio/best"),
+         "--extract-audio", "--audio-format", @audio_format]
       when :video
-        base += ["-f", (@quality || "bestvideo*+bestaudio/best")]
+        # Цепочка fallback-ов: сначала лучшее видео+аудио вместе,
+        # потом просто лучшее что есть, потом вообще что угодно
+        ["-f", (@quality || "bestvideo+bestaudio/bestvideo/best"),
+         "--merge-output-format", "mp4"]
       else
         raise Error, "Unknown format #{@format.inspect} (use :audio or :video)"
       end
-
-      (base + [url]).flatten
     end
 
-    def parse_metadata(stdout_str)
-      json_line = stdout_str.lines.find { |l| l.strip.start_with?("{") && l.strip.end_with?("}") }
-      JSON.parse(json_line || "{}")
-    rescue JSON::ParserError => e
-      raise Error, "Failed to parse yt-dlp metadata JSON: #{e.message}"
+    def run_with_timeout(cmd, timeout_sec)
+      stdout_buf = +""
+      stderr_buf = +""
+      status     = nil
+
+      Timeout.timeout(timeout_sec) do
+        Open3.popen3(yt_dlp_env, *cmd) do |_stdin, stdout, stderr, wait_thr|
+          t1 = Thread.new { stdout_buf << stdout.read }
+          t2 = Thread.new { stderr_buf << stderr.read }
+          t1.join
+          t2.join
+          status = wait_thr.value
+        end
+      end
+
+      [stdout_buf, stderr_buf, status]
+    rescue Timeout::Error
+      raise Error, "yt-dlp timed out after #{timeout_sec}s"
     end
 
     def pick_downloaded_file(dir)
       sleep 0.5
       candidates = Dir[File.join(dir, "*")].select { |p| File.file?(p) }
       candidates.reject! do |p|
-        ext = File.extname(p).downcase
-        ext =~ /\.(jpg|jpeg|png|webp|json|part|ytdl)$/
+        File.extname(p).downcase =~ /\.(jpg|jpeg|png|webp|json|part|ytdl)$/
       end
       candidates.max_by { |p| File.mtime(p) }
     end
 
     def find_thumbnail_file(dir)
-      thumbs = Dir[File.join(dir, "*.{jpg,jpeg,png,webp}")]
-      thumbs.max_by { |p| File.mtime(p) }
+      Dir[File.join(dir, "*.{jpg,jpeg,png,webp}")].max_by { |p| File.mtime(p) }
     end
 
     def extract_thumbnail_url(metadata)
       thumbs = metadata["thumbnails"]
       return nil unless thumbs.is_a?(Array) && !thumbs.empty?
-      (thumbs.max_by { |t| t["width"].to_i * t["height"].to_i })["url"]
+      thumbs.max_by { |t| t["width"].to_i * t["height"].to_i }&.fetch("url", nil)
     rescue
       nil
     end
