@@ -1,6 +1,14 @@
 FROM ruby:3.2-slim
 
-RUN apt-get update && apt-get install -y \
+ARG http_proxy
+ARG https_proxy
+ARG no_proxy
+
+ENV http_proxy=${http_proxy}
+ENV https_proxy=${https_proxy}
+ENV no_proxy=${no_proxy}
+
+RUN apt-get update && apt-get install -y --fix-missing \
     build-essential \
     ffmpeg \
     curl \

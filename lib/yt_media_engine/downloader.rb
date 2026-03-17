@@ -81,11 +81,11 @@ module YtMediaEngine
             ] + cookies_args + [url]
 
       stdout, _stderr, status = run_with_timeout(cmd, 60)
-      return {} unless status.success?
+      return {} unless status&.success?
 
       JSON.parse(stdout.force_encoding("UTF-8").scrub.strip)
-    rescue JSON::ParserError, Timeout::Error
-      {}
+    rescue JSON::ParserError => e
+      raise Error, "Failed to parse yt-dlp metadata JSON: #{e.message}"
     end
 
     def run_download(url, tmp_dir)
@@ -124,21 +124,13 @@ module YtMediaEngine
     end
 
     def run_with_timeout(cmd, timeout_sec)
-      stdout_buf = +""
-      stderr_buf = +""
-      status     = nil
+      stdout, stderr, status = nil
 
       Timeout.timeout(timeout_sec) do
-        Open3.popen3(yt_dlp_env, *cmd) do |_stdin, stdout, stderr, wait_thr|
-          t1 = Thread.new { stdout_buf << stdout.read }
-          t2 = Thread.new { stderr_buf << stderr.read }
-          t1.join
-          t2.join
-          status = wait_thr.value
-        end
+        stdout, stderr, status = Open3.capture3(yt_dlp_env, *cmd)
       end
 
-      [stdout_buf, stderr_buf, status]
+      [stdout, stderr, status]
     rescue Timeout::Error
       raise Error, "yt-dlp timed out after #{timeout_sec}s"
     end

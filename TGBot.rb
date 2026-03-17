@@ -11,7 +11,6 @@ Telegram::Bot::Client.run(TOKEN) do |bot|
   bot.listen do |message|
     case message
     when Telegram::Bot::Types::Message
-      if valid_youtube_link?(message.text)
         redis.set("user_url_#{message.chat.id}", message.text)
         redis.expire("user_url_#{message.chat.id}", 3600)
 
@@ -22,9 +21,6 @@ Telegram::Bot::Client.run(TOKEN) do |bot|
           ]
         ])
         bot.api.send_message(chat_id: message.chat.id, text: 'Select the format:', reply_markup: kb)
-      else
-        bot.api.send_message(chat_id: message.chat.id, text: 'I don\'t think this is a link to a YouTube video. Check it out.')
-      end
 
     when Telegram::Bot::Types::CallbackQuery
       url = redis.get("user_url_#{message.message.chat.id}")

@@ -10,6 +10,6 @@ gem "faraday"
 gem "json"
 
 group :development, :test do
-  gem "minitest"
+  gem "minitest", require: false
 end
 
