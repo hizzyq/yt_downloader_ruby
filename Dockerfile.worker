@@ -9,9 +9,12 @@ RUN apt-get update && apt-get install -y \
     nodejs \
     && rm -rf /var/lib/apt/lists/*
 
+# Устанавливаем yt-dlp через pip с default extras — включает yt-dlp-ejs (нужен для YouTube challenge)
+RUN pip3 install --break-system-packages "yt-dlp[default]"
 
-RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp \
-    && chmod a+rx /usr/local/bin/yt-dlp
+# Создаём конфиг yt-dlp — указываем использовать node как JS runtime
+RUN mkdir -p /root/.config/yt-dlp && \
+    echo '--js-runtimes node' > /root/.config/yt-dlp/config
 
 WORKDIR /app
 
