@@ -9,35 +9,29 @@
       <sourceFolder url="file://$MODULE_DIR$/spec" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/test" isTestSource="true" />
     </content>
-    <orderEntry type="jdk" jdkName="rbenv: 4.0.1" jdkType="RUBY_SDK" />
+    <orderEntry type="jdk" jdkName="ruby-4.0.1-p0" jdkType="RUBY_SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" scope="PROVIDED" name="bigdecimal (v4.0.1, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="bundler (v2.6.9, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="concurrent-ruby (v1.3.6, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="connection_pool (v3.0.2, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="dotenv (v3.2.0, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="drb (v2.2.3, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="dry-core (v1.2.0, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="dry-inflector (v1.3.1, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="dry-logic (v1.6.0, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="dry-struct (v1.8.1, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="dry-types (v1.9.1, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="faraday (v2.14.1, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="faraday-multipart (v1.2.0, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="faraday-net_http (v3.4.2, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="ice_nine (v0.11.2, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="json (v2.19.1, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="logger (v1.7.0, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="TEST" name="minitest (v6.0.2, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="multipart-post (v2.4.1, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="net-http (v0.9.1, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="prism (v1.9.0, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="rack (v3.2.5, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="redis (v5.4.1, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="redis-client (v0.27.0, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="sidekiq (v8.1.1, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="telegram-bot-ruby (v2.5.0, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="uri (v1.1.1, rbenv: 4.0.1) [gem]" level="application" />
-    <orderEntry type="library" scope="PROVIDED" name="zeitwerk (v2.7.5, rbenv: 4.0.1) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="bigdecimal (v4.0.1, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="concurrent-ruby (v1.3.6, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="connection_pool (v3.0.2, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="drb (v2.2.3, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="dry-core (v1.2.0, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="dry-inflector (v1.3.1, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="dry-logic (v1.6.0, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="dry-struct (v1.8.1, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="dry-types (v1.9.1, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="faraday (v2.14.1, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="faraday-multipart (v1.2.0, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="faraday-net_http (v3.4.2, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="ice_nine (v0.11.2, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="logger (v1.7.0, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="multipart-post (v2.4.1, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="net-http (v0.9.1, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="rack (v3.2.5, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="redis-client (v0.27.0, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="sidekiq (v8.1.1, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="telegram-bot-ruby (v2.5.0, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="uri (v1.1.1, ruby-4.0.1-p0) [gem]" level="application" />
+    <orderEntry type="library" scope="PROVIDED" name="zeitwerk (v2.7.5, ruby-4.0.1-p0) [gem]" level="application" />
   </component>
 </module>
