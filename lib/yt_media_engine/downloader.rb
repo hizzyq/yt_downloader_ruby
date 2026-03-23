@@ -9,7 +9,7 @@ module YtMediaEngine
 
   class Downloader
     DEFAULT_OUTPUT_DIR = File.expand_path("tmp/yt_media_engine", Dir.pwd)
-    DOWNLOAD_TIMEOUT   = 300
+    DOWNLOAD_TIMEOUT   = 120
 
     def self.download(url, **options)
       new(**options).download(url)
@@ -28,11 +28,12 @@ module YtMediaEngine
       @format       = format&.to_sym
       @audio_format = audio_format
       @video_format = video_format
-      @quality      = quality
+      @quality      = quality&.to_s&.strip
       @output_dir   = File.expand_path(output_dir.to_s)
       @yt_dlp_path  = yt_dlp_path
       @ffmpeg_path  = ffmpeg_path
       @cookies_path = cookies_path && File.expand_path(cookies_path.to_s)
+      @proxy_url = ENV['PROXY_URL']
 
       FileUtils.mkdir_p(@output_dir)
     end
@@ -62,6 +63,11 @@ module YtMediaEngine
 
     private
 
+    def proxy_args
+      return [] if @proxy_url.to_s.strip.empty?
+      ["--proxy", @proxy_url]
+    end
+
     def cookies_args
       return [] unless @cookies_path && File.file?(@cookies_path) && File.size(@cookies_path) > 0
       ["--cookies", @cookies_path]
@@ -73,12 +79,12 @@ module YtMediaEngine
 
     def fetch_metadata(url)
       cmd = [
-              @yt_dlp_path,
-              "--no-playlist",
-              "--dump-json",
-              "--no-warnings",
-              "--force-ipv4"
-            ] + cookies_args + [url]
+        @yt_dlp_path,
+        "--no-playlist",
+        "--dump-json",
+        "--no-warnings",
+        "--force-ipv4"
+      ] + cookies_args + proxy_args + [url]
 
       stdout, _stderr, status = run_with_timeout(cmd, 60)
       return {} unless status&.success?
@@ -90,15 +96,15 @@ module YtMediaEngine
 
     def run_download(url, tmp_dir)
       cmd = [
-              @yt_dlp_path,
-              "--no-playlist",
-              "--no-warnings",
-              "--restrict-filenames",
-              "--force-ipv4",
-              "-o", File.join(tmp_dir, "%(title)s.%(ext)s"),
-              "--write-thumbnail",
-              "--convert-thumbnails", "jpg"
-            ] + cookies_args + format_args + [url]
+        @yt_dlp_path,
+        "--no-playlist",
+        "--no-warnings",
+        "--restrict-filenames",
+        "--force-ipv4",
+        "-o", File.join(tmp_dir, "%(title)s.%(ext)s"),
+        "--write-thumbnail",
+        "--convert-thumbnails", "jpg"
+      ] + cookies_args + proxy_args + format_args + [url]
 
       _stdout, stderr, status = run_with_timeout(cmd, DOWNLOAD_TIMEOUT)
 
@@ -110,16 +116,47 @@ module YtMediaEngine
     def format_args
       case @format
       when :audio
-        # bestaudio/best — fallback на best если отдельного аудио нет
-        ["-f", (@quality || "bestaudio/best"),
-         "--extract-audio", "--audio-format", @audio_format]
+        # bestaudio → потом лучшее что есть с перекодированием
+        [
+          "-f", "bestaudio/best",
+          "--extract-audio",
+          "--audio-format", @audio_format,
+          "--audio-quality", "0"   # лучшее качество при перекодировании
+        ]
+
       when :video
-        # Цепочка fallback-ов: сначала лучшее видео+аудио вместе,
-        # потом просто лучшее что есть, потом вообще что угодно
-        ["-f", (@quality || "bestvideo+bestaudio/bestvideo/best"),
-         "--merge-output-format", "mp4"]
+        ["-f", video_format_string, "--merge-output-format", "mp4"]
+
+      when :preview
+        # Только метаданные и миниатюра — само видео не качаем
+        ["--skip-download"]
+
       else
-        raise Error, "Unknown format #{@format.inspect} (use :audio or :video)"
+        raise Error, "Unknown format #{@format.inspect} (use :audio, :video or :preview)"
+      end
+    end
+
+    # Строит правильную строку формата для yt-dlp с fallback-цепочкой
+    #
+    # Примеры результата:
+    #   quality="1080" → "bestvideo[height<=1080]+bestaudio/bestvideo[height<=1080]/best[height<=1080]/bestvideo+bestaudio/best"
+    #   quality=nil    → "bestvideo+bestaudio/bestvideo/best"
+    def video_format_string
+      if @quality && @quality =~ /\A\d+\z/
+        h = @quality.to_i
+        # Цепочка с постепенным снижением требований:
+        # 1. Отдельные видео+аудио треки нужного качества (требует ffmpeg для merge)
+        # 2. Один трек (progressive) нужного качества
+        # 3. Лучшее что есть с нужным качеством (без ограничения на codec)
+        # 4. Просто лучшее без ограничений — последний fallback
+        "bestvideo[height<=#{h}][ext=mp4]+bestaudio[ext=m4a]" \
+        "/bestvideo[height<=#{h}]+bestaudio" \
+        "/best[height<=#{h}]" \
+        "/bestvideo+bestaudio" \
+        "/best"
+      else
+        # Качество не указано — берём максимум
+        "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
       end
     end
 

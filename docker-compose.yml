@@ -32,6 +32,14 @@ services:
     networks:
       - app_net
 
+  proxy-bridge:
+    image: ginuerzh/gost
+    restart: unless-stopped
+    # Заменяем user:pass@host:port на ваши данные из логов
+    command: ""
+    networks:
+      - app_net
+
 volumes:
   redis_data:
   shared_media:
