@@ -79,12 +79,12 @@ module YtMediaEngine
 
     def fetch_metadata(url)
       cmd = [
-        @yt_dlp_path,
-        "--no-playlist",
-        "--dump-json",
-        "--no-warnings",
-        "--force-ipv4"
-      ] + cookies_args + proxy_args + [url]
+              @yt_dlp_path,
+              "--no-playlist",
+              "--dump-json",
+              "--no-warnings",
+              "--force-ipv4"
+            ] + cookies_args + proxy_args + [url]
 
       stdout, _stderr, status = run_with_timeout(cmd, 60)
       return {} unless status&.success?
@@ -96,15 +96,15 @@ module YtMediaEngine
 
     def run_download(url, tmp_dir)
       cmd = [
-        @yt_dlp_path,
-        "--no-playlist",
-        "--no-warnings",
-        "--restrict-filenames",
-        "--force-ipv4",
-        "-o", File.join(tmp_dir, "%(title)s.%(ext)s"),
-        "--write-thumbnail",
-        "--convert-thumbnails", "jpg"
-      ] + cookies_args + proxy_args + format_args + [url]
+              @yt_dlp_path,
+              "--no-playlist",
+              "--no-warnings",
+              "--restrict-filenames",
+              "--force-ipv4",
+              "-o", File.join(tmp_dir, "%(title)s.%(ext)s"),
+              "--write-thumbnail",
+              "--convert-thumbnails", "jpg"
+            ] + cookies_args + proxy_args + format_args + [url]
 
       _stdout, stderr, status = run_with_timeout(cmd, DOWNLOAD_TIMEOUT)
 
@@ -117,8 +117,9 @@ module YtMediaEngine
       case @format
       when :audio
         # bestaudio → потом лучшее что есть с перекодированием
+        audio_format_string = @quality || "bestaudio/best"
         [
-          "-f", "bestaudio/best",
+          "-f", audio_format_string,
           "--extract-audio",
           "--audio-format", @audio_format,
           "--audio-quality", "0"   # лучшее качество при перекодировании
@@ -150,10 +151,10 @@ module YtMediaEngine
         # 3. Лучшее что есть с нужным качеством (без ограничения на codec)
         # 4. Просто лучшее без ограничений — последний fallback
         "bestvideo[height<=#{h}][ext=mp4]+bestaudio[ext=m4a]" \
-        "/bestvideo[height<=#{h}]+bestaudio" \
-        "/best[height<=#{h}]" \
-        "/bestvideo+bestaudio" \
-        "/best"
+          "/bestvideo[height<=#{h}]+bestaudio" \
+          "/best[height<=#{h}]" \
+          "/bestvideo+bestaudio" \
+          "/best"
       else
         # Качество не указано — берём максимум
         "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
