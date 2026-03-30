@@ -11,7 +11,7 @@ Telegram::Bot::Client.run(TOKEN) do |bot|
   bot.listen do |message|
     case message
     when Telegram::Bot::Types::Message
-      if (valid_youtube_link?(message) && youtube_video_exists?(message, "AIzaSyBbB4Rs7TQTSzVDQXNgKr0AVnXuBoaA6iA")) | valid_rutube_link?(message)
+      if (valid_youtube_link?(message.text) && youtube_video_exists?(message.text, "AIzaSyBbB4Rs7TQTSzVDQXNgKr0AVnXuBoaA6iA")) | valid_rutube_link?(message.text)
         redis.set("user_url_#{message.chat.id}", message.text)
         redis.expire("user_url_#{message.chat.id}", 3600)
 
