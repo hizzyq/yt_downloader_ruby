@@ -14,8 +14,10 @@ TOKEN = ENV['TELEGRAM_TOKEN']
 logger.info("Bot is starting...")
 
 Thread.new do
+  # Создаем отдельное подключение к Redis для потока, так как brpop блокирует соединение
+  thread_redis = Redis.new(url: ENV.fetch('REDIS_URL', 'redis://localhost:6379/0'))
   loop do
-    _list, event_json = redis.brpop("bot_events", timeout: 5)
+    _list, event_json = thread_redis.brpop("bot_events", timeout: 5)
     if event_json
       begin
         event = JSON.parse(event_json)
@@ -64,7 +66,7 @@ Telegram::Bot::Client.run(TOKEN) do |bot|
   bot.listen do |message|
     case message
     when Telegram::Bot::Types::Message
-      if (valid_youtube_link?(message.text) && youtube_video_exists?(message.text, "AIzaSyBbB4Rs7TQTSzVDQXNgKr0AVnXuBoaA6iA")) | valid_rutube_link?(message.text)
+      if (valid_youtube_link?(message.text) && youtube_video_exists?(message.text, "AIzaSyBbB4Rs7TQTSzVDQXNgKr0AVnXuBoaA6iA")) || valid_rutube_link?(message.text)
       logger.info("Received message from chat_id #{message.chat.id}: #{message.text}")
         redis.set("user_url_#{message.chat.id}", message.text)
         redis.expire("user_url_#{message.chat.id}", 3600)
