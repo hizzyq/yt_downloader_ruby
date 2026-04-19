@@ -8,6 +8,7 @@ gem "dotenv"
 gem "telegram-bot-ruby"
 gem "faraday"
 gem "json"
+gem 'sinatra'
 
 group :development, :test do
   gem "minitest", require: false

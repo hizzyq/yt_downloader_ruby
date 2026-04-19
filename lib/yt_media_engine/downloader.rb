@@ -106,7 +106,7 @@ module YtMediaEngine
               "--convert-thumbnails", "jpg"
             ] + cookies_args + proxy_args + format_args + [url]
 
-      _stdout, stderr, status = run_with_timeout(cmd, DOWNLOAD_TIMEOUT)
+      stdout, stderr, status = run_with_timeout(cmd, DOWNLOAD_TIMEOUT)
 
       unless status.success?
         raise Error, "yt-dlp failed (status=#{status.exitstatus}): #{stderr.force_encoding('UTF-8').scrub.strip}"
@@ -138,10 +138,6 @@ module YtMediaEngine
     end
 
     # Строит правильную строку формата для yt-dlp с fallback-цепочкой
-    #
-    # Примеры результата:
-    #   quality="1080" → "bestvideo[height<=1080]+bestaudio/bestvideo[height<=1080]/best[height<=1080]/bestvideo+bestaudio/best"
-    #   quality=nil    → "bestvideo+bestaudio/bestvideo/best"
     def video_format_string
       if @quality && @quality =~ /\A\d+\z/
         h = @quality.to_i
